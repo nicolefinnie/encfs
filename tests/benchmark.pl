@@ -5,7 +5,9 @@
 use File::Temp;
 use warnings;
 
-require("tests/common.pl");
+#require("tests/common.pl");
+require("common.pl");
+
 
 # Create a new empty working directory
 sub newWorkingDir {
@@ -35,7 +37,9 @@ sub mount_encfs {
     mkdir($p);
 
     delete $ENV{"ENCFS6_CONFIG"};
-    system("./build/encfs --extpass=\"echo test\" --standard $c $p > /dev/null");
+    #system("./build/encfs --extpass=\"echo test\" --standard $c $p > /dev/null");
+    system("encfs --extpass=\"echo test\" --standard $c $p > /dev/null");
+
     waitForFile("$c/.encfs6.xml") or die("Control file not created");
 
     print "# encfs mounted on $p\n";
@@ -170,18 +174,21 @@ sub main {
         $mountpoint = mount_encfs($workingDir);
         my $encfs_results = benchmark($mountpoint);
 
-        print "# mounting ecryptfs\n";
-        $mountpoint = mount_ecryptfs($workingDir);
-        my $ecryptfs_results;
-        if($mountpoint) {
-            $ecryptfs_results = benchmark($mountpoint);
-        }
+        print "# skip mounting ecryptfs\n";
+        #$mountpoint = mount_ecryptfs($workingDir);
+        #my $ecryptfs_results;
+        #if($mountpoint) {
+        #    $ecryptfs_results = benchmark($mountpoint);
+        #}
 
         cleanup($workingDir);
 
         print "\nResults for $prefix\n";
         print "==============================\n\n";
-        tabulate( $encfs_results, $ecryptfs_results );
+        #tabulate( $encfs_results, $ecryptfs_results );
+
+        tabulate( $encfs_results);
+
         print "\n";
     }
 }
