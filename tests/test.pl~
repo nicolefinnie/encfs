@@ -1,0 +1,10 @@
+#!/usr/bin/perl
+
+my $kernelRelease = `uname -r`;
+
+$kernelRelease = "3.10.0-327.28.2.el7.x86_64";
+
+if ($kernelRelease =~ /.el7./){
+ print "eCryptfs is not supported by CentOs 7\n";
+} 
+

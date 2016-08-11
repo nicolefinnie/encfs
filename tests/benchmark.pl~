@@ -206,7 +206,7 @@ sub main {
         cleanup($workingDir);
 
         print "\nResults for $prefix\n";
-        print "=============================================================\n\n";
+        print "===============================================================================\n\n";
         ( $centOs7 == 0) ? tabulate( $encfs_results, $ecryptfs_results ) : tabulate( $encfs_results);
 
         print "\n";
