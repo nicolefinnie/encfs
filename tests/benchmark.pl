@@ -77,6 +77,7 @@ sub benchmark {
     my @results = ();
     my @writeResult = ();
     my @untarResult = ();
+    my @deleteResult = ();
 
     system("sync");
     stopwatch_start("write file");
@@ -108,10 +109,19 @@ sub benchmark {
 
     system("echo 3 > /proc/sys/vm/drop_caches");
     system("sync");
+    
+    #retrieve the total size of the working directory
+    my $dirSizeDetail = `du -sk $dir`;
+    $dirSizeDetail =~ /(\d+)/;
+    my $dirSize = $1;
+
     stopwatch_start("rm");
         system("rm -Rf $dir/*");
         system("sync");
-    stopwatch_stop(\@results);
+    stopwatch_stop(\@deleteResult);
+    # delete speed in MB/s
+    push ( @results, [ $deleteResult[0][0], ($dirSize / 1000.00) / ($deleteResult[0][1] / 1000.00), 'MB/s' ] );
+   
 
     return \@results;
 }
