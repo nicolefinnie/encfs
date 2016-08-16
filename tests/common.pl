@@ -92,7 +92,7 @@ sub writeZeroes
         my $filename = shift;
         my $size = shift;
         open(my $fh, ">", $filename);
-        my $bs = 4096; # 4 KiB
+        my $bs = 4096; # 4 KB
         my $block = "\0" x $bs;
         my $remain;
         for($remain = $size; $remain >= $bs; $remain -= $bs)
@@ -135,7 +135,7 @@ sub stopwatch {
 
     if($start) {
         $name = shift;
-        print("* $name... ");
+        print("* $name...\n");
         $start_time = time();
     } else {
         my $delta = ms(time() - $start_time);
@@ -153,6 +153,84 @@ sub dl_linuxgz {
     system("wget -nv -c https://www.kernel.org/pub/linux/kernel/v3.x/linux-3.0.tar.gz -O $linuxgz");
     print "done\n";
 }
+
+sub cleanupEcryptfs {
+    print "cleaning up eCryptfs...";
+    my $workingDir = shift;
+   
+    print "un-mount ".$workingDir."/ecryptfs_plaintext\n";
+    system("umount $workingDir/ecryptfs_plaintext");
+    system("rm -Rf $workingDir");
+    
+    print "done\n";
+}
+
+sub cleanupEncfs {
+    print "cleaning up encfs...";
+    my $workingDir = shift;
+
+    print "fuse un-mount ".$workingDir."/ecryptfs_plaintext\n";
+    system("fusermount -u $workingDir/encfs_plaintext");
+    system("rm -Rf $workingDir");
+
+    print "done\n";    
+}
+
+# Create a new empty working directory
+sub newWorkingDir {
+    my $prefix     = shift;
+    my $workingDir = mkdtemp("$prefix/encfs-performance-XXXX")
+      || die("Could not create temporary directory");
+
+    return $workingDir;
+}
+
+
+
+sub mount_encfs {
+    my $workingDir = shift;
+
+    my $c = "$workingDir/encfs_ciphertext";
+    my $p = "$workingDir/encfs_plaintext";
+
+    mkdir($c);
+    mkdir($p);
+
+    delete $ENV{"ENCFS6_CONFIG"};
+    #system("./build/encfs --extpass=\"echo test\" --standard $c $p > /dev/null");
+    system("encfs --extpass=\"echo test\" --standard $c $p > /dev/null");
+
+    waitForFile("$c/.encfs6.xml") or die("Control file not created");
+
+    print "# encfs mounted on $p\n";
+
+    return $p;
+}
+
+sub mount_ecryptfs {
+
+    if(system("which mount.ecryptfs > /dev/null") != 0) {
+        print "skipping ecryptfs\n";
+        return "";
+    }
+
+    my $workingDir = shift;
+
+    my $c = "$workingDir/ecryptfs_ciphertext";
+    my $p = "$workingDir/ecryptfs_plaintext";
+
+    mkdir($c);
+    mkdir($p);
+
+    system("expect -c \"spawn mount -t ecryptfs $c $p\" ./tests/mount-ecryptfs.expect > /dev/null") == 0
+      or die("ecryptfs mount failed - are you root?");
+
+    print "# ecryptfs mounted on $p\n";
+
+    return $p;
+}
+
+
 
 # As this file will be require()'d, it needs to return true
 return 1;
