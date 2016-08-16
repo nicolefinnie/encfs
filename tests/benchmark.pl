@@ -5,8 +5,7 @@
 use File::Temp;
 use warnings;
 
-#require("tests/common.pl");
-require("common.pl");
+require("tests/common.pl");
 
 
 # Create a new empty working directory
@@ -18,14 +17,28 @@ sub newWorkingDir {
     return $workingDir;
 }
 
-sub cleanup {
-    print "cleaning up...";
+sub cleanupEncfs {
+    print "cleaning up encfs...";
     my $workingDir = shift;
-    system("umount $workingDir/ecryptfs_plaintext");
+
+    print "fuse un-mount ".$workingDir."/ecryptfs_plaintext\n";
     system("fusermount -u $workingDir/encfs_plaintext");
     system("rm -Rf $workingDir");
+
+    print "done\n";    
+}
+
+sub cleanupEcryptfs {
+    print "cleaning up eCryptfs...";
+    my $workingDir = shift;
+   
+    print "un-mount ".$workingDir."/ecryptfs_plaintext\n";
+    system("umount $workingDir/ecryptfs_plaintext");
+    system("rm -Rf $workingDir");
+    
     print "done\n";
 }
+
 
 sub mount_encfs {
     my $workingDir = shift;
@@ -62,7 +75,7 @@ sub mount_ecryptfs {
     mkdir($c);
     mkdir($p);
 
-    system("expect -c \"spawn mount -t ecryptfs $c $p\" mount-ecryptfs.expect > /dev/null") == 0
+    system("expect -c \"spawn mount -t ecryptfs $c $p\" ./tests/mount-ecryptfs.expect > /dev/null") == 0
       or die("ecryptfs mount failed - are you root?");
 
     print "# ecryptfs mounted on $p\n";
@@ -199,22 +212,27 @@ sub main {
         print "# mounting encfs\n";
         $mountpoint = mount_encfs($workingDir);
         my $encfs_results = benchmark($mountpoint);
+        cleanupEncfs($workingDir);
+	
+
 	my $ecryptfs_results;
-        	
         if ( $centOs7 == 0 ) {
-        	print "# mounting ecryptfs\n";
+		$workingDir = newWorkingDir($prefix);
+        	print "# mounting ecryptfs on ".$workingDir."\n";
         	$mountpoint = mount_ecryptfs($workingDir);
         	
 		if($mountpoint) {
             	  $ecryptfs_results = benchmark($mountpoint);
+		  cleanupEcryptfs($workingDir);
         	}
+
+
 	} else {
 		print "# Skipping ecryptfs testing on CentOS 7 \n";
 
 	}
 
-        cleanup($workingDir);
-
+        
         print "\nResults for $prefix\n";
         print "=============================================================\n\n";
         ( $centOs7 == 0) ? tabulate( $encfs_results, $ecryptfs_results ) : tabulate( $encfs_results);
