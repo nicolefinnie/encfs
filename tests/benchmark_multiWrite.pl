@@ -19,19 +19,24 @@ sub subWriteZeroes {
     system("sync");
 
     stopwatch_stop(\@writeResult);
-
+    unlink("$dir");
     return(@writeResult);
 }
 
+# benchmark(directory, number_of_threads, size_in_MB);
 sub benchmark {
     my $dir = shift;
-   
-    my $numberOfThreads = 24;
+    my $numberOfThreads = shift;
+    my $sizeInMB = shift;
+
     my @threads = ();
     # 3-dimensional-array
     # number of threads -> ['name', delta_time, 'ms'], we only care about delta_time
     my @returnData = (); 
-    my $sizeInMB = 100.00;
+    my $totalThroughput = 0;
+    my @totalTime = ();
+    
+    stopwatch_start("Total threads: ".$numberOfThreads);
 
     for (my $count=0 ; $count < $numberOfThreads; $count++) {
 	my $filepath = $dir."/zero".$count;
@@ -44,24 +49,27 @@ sub benchmark {
     	push(@returnData, \@data);
     }
    
+    stopwatch_stop(\@totalTime);
+
     for (my $count=0 ; $count < $numberOfThreads; $count++) {
-	print ($returnData[$count][0][0], ": ", $sizeInMB / ($returnData[$count][0][1]/1000.00), " MB/s \n");
+        my $throughput = $sizeInMB / ($returnData[$count][0][1]/1000.00);
+	$totalThroughput += $throughput;
     }
 
-    return \@returnData;
+    # return average throughput, total time in ms
+    return [($totalThroughput / $numberOfThreads ), $totalTime[0][1]];
 }
 
 sub main{
  	if ( $#ARGV < 0 ) {
-        print "Usage: test/benchmark.pl DIR1 [DIR2] [...]\n";
+        print "Usage: test/benchmark+multiWrite.pl DIR NumberOfThreads SizeOfFile \n";
         print "\n";
         print "Arguments:\n";
-        print "  DIRn ... Working directory. This is where the encrypted files\n";
+        print "  DIR ... Working directory. This is where the encrypted files\n";
         print "           are stored. Specifying multiple directories will run\n";
         print "           the benchmark in each.\n";
         print "\n";
-        print "For details about the testcases see PERFORMANCE.md.\n";
-
+   
         exit(1);
 
        
@@ -69,19 +77,31 @@ sub main{
 
     my $workingDir;
     my $mountpoint;
-    my $prefix;
-
-    while ( $prefix = shift(@ARGV) ) {
+    my $prefix = shift(@ARGV);
+    my $numberOfThreads = shift(@ARGV);
+    my $sizeOfFile = shift(@ARGV);
+    my @returnThroughputTotalTime = ();
+    
+    for (my $count=1; $count<=$numberOfThreads; $count++) {
         $workingDir = newWorkingDir($prefix);
 
         print "# mounting encfs\n";
         $mountpoint = mount_encfs($workingDir);
-        my $encfs_results = benchmark($mountpoint);
+        push(@returnThroughputTotalTime, benchmark($mountpoint, $count, $sizeOfFile));
         cleanupEncfs($workingDir);
-	
-        
     }
 
+    #TODO total time (s)   
+    print "\nResults - Each thread writes a file of $sizeOfFile MB to $prefix\n";
+    print "=============================================================\n\n";
+    print " Number of threads   |  Throughput per thread  | Total disk write  | Total write time  |\n";
+    print ":--------------------|------------------------:|------------------:|------------------:|\n";
+
+
+     for (my $count=0; $count<$numberOfThreads; $count++) {
+    	printf( "%-20s | %12f %-10s | %8d %-8s | %12f %-4s |\n", ($count+1)." parallel write", $returnThroughputTotalTime[$count][0], " MB/s", ($sizeOfFile*($count+1)), " MB", 
+         ($returnThroughputTotalTime[$count][1]/1000.0), " s");
+     }
 }
 
 
