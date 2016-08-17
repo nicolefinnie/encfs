@@ -94,13 +94,17 @@ sub main{
     #TODO total time (s)   
     print "\nResults - Each thread writes a file of $sizeOfFile MB to $prefix\n";
     print "=============================================================\n\n";
-    print " Number of threads   |  Throughput per thread  | Total disk write  | Total write time  |\n";
-    print ":--------------------|------------------------:|------------------:|------------------:|\n";
+    print " Number of threads   |  Throughput per thread  | Total disk write  | Total write time  |  Total throughput   |\n";
+    print ":--------------------|------------------------:|------------------:|------------------:|--------------------:|\n";
 
 
      for (my $count=0; $count<$numberOfThreads; $count++) {
-    	printf( "%-20s | %12f %-10s | %8d %-8s | %12f %-4s |\n", ($count+1)." parallel write", $returnThroughputTotalTime[$count][0], " MB/s", ($sizeOfFile*($count+1)), " MB", 
-         ($returnThroughputTotalTime[$count][1]/1000.0), " s");
+	my $throughputPerThread = $returnThroughputTotalTime[$count][0];
+ 	my $totalDiskWrite = ($sizeOfFile*($count+1));
+	my $totalWriteTime = ($returnThroughputTotalTime[$count][1]/1000.0);
+	my $totalThroughput = $totalDiskWrite * 1.0 / $totalWriteTime; 
+    	printf( "%-20s | %12f %-10s | %8d %-8s | %12f %-4s | %12f %-6s |\n", " ".($count+1)." parallel write", $throughputPerThread, " MB/s", $totalDiskWrite, " MB", 
+          $totalWriteTime," s", $totalThroughput, " MB/s");
      }
 }
 
