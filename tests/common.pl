@@ -165,6 +165,15 @@ sub cleanupEcryptfs {
     print "done\n";
 }
 
+sub cleanupLuks {
+    my $workingDir = shift;
+    print "cleaning up files under ".$workingDir;
+
+    system("rm -Rf $workingDir");
+    print "done\n";
+
+}
+
 sub cleanupEncfs {
     print "cleaning up encfs...";
     my $workingDir = shift;

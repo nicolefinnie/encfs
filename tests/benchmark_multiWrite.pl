@@ -78,6 +78,7 @@ sub main{
     my $workingDir;
     my $mountpoint;
     my $prefix = shift(@ARGV);
+    my $prefixNative = shift(@ARGV);
     my $numberOfThreads = shift(@ARGV);
     my $sizeOfFile = shift(@ARGV);
     my @returnThroughputTotalTime = ();
@@ -88,25 +89,26 @@ sub main{
     for (my $count=1; $count<=$numberOfThreads; $count++) {
         $workingDir = newWorkingDir($prefix);
 
-        print "# mounting encfs".$workingDir."\n";
-        $mountpoint = mount_encfs($workingDir);
+        #print "# mounting encfs".$workingDir."\n";
+        #$mountpoint = mount_encfs($workingDir);
 	
  	#print "# mounting eCryptfs\n";
         #$mountpoint = mount_ecryptfs($workingDir);
-        push(@returnThroughputTotalTime, benchmark($mountpoint, $count, $sizeOfFile));
+        push(@returnThroughputTotalTime, benchmark($workingDir, $count, $sizeOfFile));
  	
         print "done\n";
-	cleanupEncfs($workingDir);
+	cleanupLuks($workingDir);
 	#cleanupEcryptfs($workingDir);
     }
 
 
     print "Test write disk speed without encryption.........\n";    
     for (my $count=1; $count<=$numberOfThreads; $count++) {
-        $workingDir = newWorkingDir($prefix);
-	push(@nativeReturnThroughputTotalTime, benchmark($workingDir, $count, $sizeOfFile));
+        $workingDir = newWorkingDir($prefixNative);
+	
+        push(@nativeReturnThroughputTotalTime, benchmark($workingDir, $count, $sizeOfFile));
         print "done\n";
-	cleanupEncfs($workingDir);
+	cleanupLuks($workingDir);
 	#cleanupEcryptfs($workingDir);
     }
 
@@ -121,7 +123,7 @@ sub main{
      for (my $count=0; $count<$numberOfThreads; $count++) {
 	my $throughputPerThread = $returnThroughputTotalTime[$count][0];
 	my $nativeThroughputPerThread = $nativeReturnThroughputTotalTime[$count][0];
-
+	#print "native throughput:".$nativeThroughputPerThread;
  	my $totalDiskWrite = ($sizeOfFile*($count+1));
 	my $totalWriteTime = ($returnThroughputTotalTime[$count][1]/1000.0);
 	my $totalThroughput = $totalDiskWrite * 1.0 / $totalWriteTime; 
