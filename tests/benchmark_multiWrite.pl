@@ -81,30 +81,54 @@ sub main{
     my $numberOfThreads = shift(@ARGV);
     my $sizeOfFile = shift(@ARGV);
     my @returnThroughputTotalTime = ();
-    
+    my @nativeReturnThroughputTotalTime = ();
+   
+
+    print "Test write disk speed with encryption.........\n";    
     for (my $count=1; $count<=$numberOfThreads; $count++) {
         $workingDir = newWorkingDir($prefix);
 
-        print "# mounting encfs\n";
+        print "# mounting encfs".$workingDir."\n";
         $mountpoint = mount_encfs($workingDir);
+	
+ 	#print "# mounting eCryptfs\n";
+        #$mountpoint = mount_ecryptfs($workingDir);
         push(@returnThroughputTotalTime, benchmark($mountpoint, $count, $sizeOfFile));
-        cleanupEncfs($workingDir);
+ 	
+        print "done\n";
+	cleanupEncfs($workingDir);
+	#cleanupEcryptfs($workingDir);
     }
+
+
+    print "Test write disk speed without encryption.........\n";    
+    for (my $count=1; $count<=$numberOfThreads; $count++) {
+        $workingDir = newWorkingDir($prefix);
+	push(@nativeReturnThroughputTotalTime, benchmark($workingDir, $count, $sizeOfFile));
+        print "done\n";
+	cleanupEncfs($workingDir);
+	#cleanupEcryptfs($workingDir);
+    }
+
 
     #TODO total time (s)   
     print "\nResults - Each thread writes a file of $sizeOfFile MB to $prefix\n";
     print "=============================================================\n\n";
-    print " Number of threads   |  Throughput per thread  | Total disk write  | Total write time  |  Total throughput   |\n";
-    print ":--------------------|------------------------:|------------------:|------------------:|--------------------:|\n";
+    print " Number of threads | Throughput per thread | Total write  |  Total time  | Total throughput | Ratio to native |\n";
+    print ":------------------|----------------------:|-------------:|-------------:|-----------------:|----------------:|\n";
 
 
      for (my $count=0; $count<$numberOfThreads; $count++) {
 	my $throughputPerThread = $returnThroughputTotalTime[$count][0];
+	my $nativeThroughputPerThread = $nativeReturnThroughputTotalTime[$count][0];
+
  	my $totalDiskWrite = ($sizeOfFile*($count+1));
 	my $totalWriteTime = ($returnThroughputTotalTime[$count][1]/1000.0);
 	my $totalThroughput = $totalDiskWrite * 1.0 / $totalWriteTime; 
-    	printf( "%-20s | %12f %-10s | %8d %-8s | %12f %-4s | %12f %-6s |\n", " ".($count+1)." parallel write", $throughputPerThread, " MB/s", $totalDiskWrite, " MB", 
-          $totalWriteTime," s", $totalThroughput, " MB/s");
+
+	my $ratioToNative = $throughputPerThread / 1.0 / $nativeThroughputPerThread;
+    	printf( "%-18s | %10.2f %-10s | %6d %-5s | %8.4f %-3s | %8.2f %-7s | %15.2f |\n", " ".($count+1)." parallel write", $throughputPerThread, " MB/s", $totalDiskWrite, " MB", 
+          $totalWriteTime," s", $totalThroughput, " MB/s", $ratioToNative );
      }
 }
 
